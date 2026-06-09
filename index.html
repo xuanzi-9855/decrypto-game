@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>谍报风云 - 在线版</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e1a;--card:#141b2d;--card2:#1a2340;
+  --teamA:#3b82f6;--teamAbg:rgba(59,130,246,.12);
+  --teamB:#ef4444;--teamBbg:rgba(239,68,68,.12);
+  --cyan:#06b6d4;--gold:#f59e0b;--green:#22c55e;
+  --text:#e2e8f0;--muted:#94a3b8;--dim:#475569;
+  --border:#1e293b;--radius:12px;
+}
+body{font-family:'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+#app{max-width:600px;margin:0 auto;padding:20px 16px 80px;min-height:100vh}
+h1{font-size:2em;text-align:center;letter-spacing:4px;margin-bottom:6px;background:linear-gradient(135deg,var(--cyan),var(--teamA));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:1.3em;text-align:center;margin-bottom:16px;color:var(--text)}
+h3{font-size:1.05em;margin-bottom:10px;color:var(--cyan)}
+.subtitle{text-align:center;color:var(--muted);font-size:.9em;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card.team-a{border-left:3px solid var(--teamA);background:var(--teamAbg)}
+.card.team-b{border-left:3px solid var(--teamB);background:var(--teamBbg)}
+.btn{display:inline-block;padding:11px 28px;border:none;border-radius:8px;font-size:1em;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),var(--teamA));color:#fff}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-danger{background:linear-gradient(135deg,var(--teamB),#dc2626);color:#fff}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--cyan)}
+.btn-sm{padding:8px 16px;font-size:.85em}
+.btn-block{display:block;width:100%;text-align:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.center{text-align:center}
+.mt{margin-top:14px}.mb{margin-bottom:14px}
+.flex{display:flex;gap:10px}.flex-1{flex:1}
+input[type=text]{width:100%;padding:11px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:1em;font-family:inherit;outline:none;transition:border .2s}
+input[type=text]:focus{border-color:var(--cyan)}
+input.clue-input{text-align:center;font-size:1.05em;font-weight:600}
+input.guess-input{text-align:center;font-size:1.4em;font-weight:700;letter-spacing:2px;width:64px}
+.label{font-size:.82em;color:var(--muted);margin-bottom:5px;display:block}
+.word-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.word-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.word-card .num{font-size:1.6em;font-weight:800;color:var(--cyan);opacity:.3}
+.word-card .word{font-size:1.15em;font-weight:700;margin-top:2px}
+.code-digits{display:flex;gap:12px;justify-content:center;margin:12px 0}
+.code-digit{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.7em;font-weight:800;background:var(--card2);border:2px solid var(--cyan);border-radius:10px;color:var(--cyan)}
+.guess-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px;background:var(--card2);border-radius:8px}
+.guess-row .hint-word{flex:1;font-size:1em;font-weight:600}
+.guess-row .arrow{color:var(--dim);font-size:1.1em}
+.score-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--card);border-radius:var(--radius);margin-bottom:14px;border:1px solid var(--border);font-size:.85em}
+.score-team{display:flex;align-items:center;gap:6px}
+.score-team .name{font-weight:700}
+.tokens{display:flex;gap:3px}
+.token{width:16px;height:16px;border-radius:50%;border:2px solid var(--dim)}
+.token.intercept{background:var(--gold);border-color:var(--gold)}
+.token.miss{background:var(--teamB);border-color:var(--teamB)}
+.round-badge{background:var(--card2);padding:4px 12px;border-radius:20px;font-size:.82em;color:var(--muted)}
+.tl{display:inline-block;padding:3px 10px;border-radius:6px;font-weight:700;font-size:.82em;margin-bottom:6px}
+.tl.a{background:var(--teamAbg);color:var(--teamA)}.tl.b{background:var(--teamBbg);color:var(--teamB)}
+.my-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72em;font-weight:700;margin-left:6px;background:rgba(6,182,212,.15);color:var(--cyan)}
+.wait-box{text-align:center;padding:48px 16px}
+.wait-box .icon{font-size:3em;margin-bottom:16px;animation:pulse 1.5s infinite}
+.wait-box p{color:var(--muted);font-size:1.05em;line-height:1.6}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.result-card{padding:12px;border-radius:var(--radius);margin-bottom:10px;font-size:.92em}
+.result-card.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.result-card.fail{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.result-icon{font-size:1.2em;margin-right:6px}
+.history-table{width:100%;border-collapse:collapse;font-size:.82em}
+.history-table th{padding:6px;text-align:center;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
+.history-table td{padding:6px;text-align:center;border-bottom:1px solid var(--border)}
+.room-code{font-size:2.2em;font-weight:800;letter-spacing:8px;color:var(--cyan);text-align:center;margin:12px 0;font-family:'Courier New',monospace}
+.player-list-item{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.player-list-item:last-child{border-bottom:none}
+.player-dot{width:8px;height:8px;border-radius:50%}
+.conn-bar{text-align:center;font-size:.75em;padding:6px;margin:-20px -16px 12px;border-radius:0 0 8px 8px}
+.conn-bar.ok{color:var(--green);background:rgba(34,197,94,.08)}
+.conn-bar.err{color:var(--teamB);background:rgba(239,68,68,.08)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;max-width:540px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h3{text-align:center;margin-bottom:14px}
+.rules-content{line-height:1.8;font-size:.9em;color:var(--muted)}
+.rules-content h4{color:var(--cyan);margin:14px 0 6px;font-size:1em}
+.rules-content ul{padding-left:18px;margin-bottom:6px}
+.rules-content li{margin-bottom:3px}
+.winner-text{font-size:2.2em;font-weight:800;text-align:center;margin:16px 0}
+.tab-btns{display:flex;gap:8px;margin-bottom:16px}
+.tab-btn{flex:1;padding:12px;border:2px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:1em;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;font-family:inherit}
+.tab-btn:hover{border-color:var(--cyan)}
+.tab-btn.active{border-color:var(--cyan);background:rgba(6,182,212,.1)}
+.share-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;word-break:break-all;font-size:.85em;color:var(--muted);cursor:pointer;transition:background .2s}
+.share-box:hover{background:var(--border)}
+@media(max-width:480px){
+  h1{font-size:1.5em}
+  .word-grid{gap:6px}
+  .code-digit{width:44px;height:44px;font-size:1.4em}
+  .guess-row{flex-wrap:wrap}
+  .room-code{font-size:1.8em;letter-spacing:6px}
+  #app{padding:14px 10px 60px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="rulesModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('active')">
+  <div class="modal">
+    <h3>游戏规则</h3>
+    <div class="rules-content">
+      <h4>游戏概述</h4><p>谍报风云是一款 2v2 团队对抗游戏。每队有 4 个秘密词语（编号 1-4），仅本队成员可见。每轮由"加密者"用线索词传递 3 位密码，队友需要解密，敌方则尝试破译。</p>
+      <h4>回合流程</h4><ul>
+        <li><strong>加密：</strong>加密者看到 3 位密码（对应词语编号），为每个数字给出一个线索词</li>
+        <li><strong>破译：</strong>敌方根据线索猜测对方的 3 位密码</li>
+        <li><strong>解密：</strong>队友根据线索猜测己方的 3 位密码</li>
+      </ul>
+      <h4>胜负判定</h4><ul>
+        <li style="color:var(--gold)">破译成功：敌方猜对 → 敌方 +1 破译标记</li>
+        <li style="color:var(--teamB)">通讯失败：队友猜错 → 敌方 +1 失败标记</li>
+        <li style="color:var(--green)">胜利：累计 2 枚破译标记</li>
+        <li style="color:var(--teamB)">落败：累计 2 枚通讯失败标记</li>
+        <li>加时赛：8 轮后平局，双方猜测对方全部 4 个词语</li>
+      </ul>
+      <h4>线索规则</h4><ul>
+        <li>线索只能是一个词</li>
+        <li>不能直接使用词语本身或其一部分</li>
+        <li>不能使用外语翻译、谐音、数字或字母</li>
+      </ul>
+    </div>
+    <div class="center mt"><button class="btn btn-secondary btn-sm" onclick="document.getElementById('rulesModal').classList.remove('active')">关闭</button></div>
+  </div>
+</div>
+<script>
+// ============================================================
+// WORD BANK
+// ============================================================
+const WORDS=[
+'月亮','太阳','星星','大海','雪山','森林','沙漠','彩虹','闪电','瀑布',
+'苹果','香蕉','草莓','西瓜','葡萄','柠檬','芒果','樱桃','蜜桃','菠萝',
+'老虎','熊猫','海豚','猎鹰','蝴蝶','企鹅','章鱼','蜜蜂','鹦鹉','鲸鱼',
+'钢琴','吉他','小提琴','笛子','号角','锣鼓','手风琴','竖琴',
+'医生','教师','厨师','侦探','画家','歌手','船长','律师','飞行员','消防员',
+'飞机','火车','地铁','轮船','自行车','火箭','热气球','潜水艇',
+'钻石','珍珠','黄金','翡翠','琥珀','水晶','红宝石','蓝宝石',
+'咖啡','啤酒','牛奶','可乐','果汁','清茶','红酒','蜂蜜水',
+'城堡','灯塔','金字塔','教堂','寺庙','摩天楼','风车','水坝','隧道','拱桥',
+'书本','镜子','时钟','钥匙','雨伞','蜡烛','相机','望远镜','指南针','地图',
+'春天','夏天','秋天','冬天','黎明','黄昏','午夜','日出',
+'火焰','冰块','风暴','龙卷风','地震','火山','极光','流星',
+'玫瑰','樱花','仙人掌','向日葵','兰花','含羞草','竹子','荷花',
+'足球','篮球','网球','冲浪','滑雪','游泳','拳击','射箭','马术','击剑'
+];
+
+// ============================================================
+// NETWORKING & STATE
+// ============================================================
+const PEER_PREFIX='decrypto-v2-';
+let peer=null, isHost=false, myId=0, myName='', myTeam=-1, mySeat=0;
+let hostConns=[], guestConn=null;
+let gs=null; // game state (host maintains full, guest receives view)
+let viewPhase='menu', viewData={};
+let connected=false;
+
+function genRoomCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let r='';for(let i=0;i<4;i++)r+=c[Math.floor(Math.random()*c.length)];return r}
+
+function sendTo(conn,msg){try{conn.send(msg)}catch(e){}}
+function hostBroadcast(msg){hostConns.forEach(c=>{if(c.open)sendTo(c,msg)})}
+function sendToSeat(seat,msg){const c=hostConns.find(x=>x.open&&x.metadata&&x.metadata.seat===seat);if(c)sendTo(c,msg)}
+
+function newGameState(){
+  return{phase:'lobby',players:[{name:'',seat:0}],teams:[[],[]],words:[[],[]],round:0,maxRounds:8,
+    encIdx:[0,0],codes:[[],[]],clues:[['','',''],['','','']],
+    guesses:{intercept:[[],[]],decode:[[],[]]},
+    history:[[],[]],scores:{intercept:[0,0],miss:[0,0]},winner:-1,tiebreak:[null,null]}
+}
+
+// ============================================================
+// HOST LOGIC
+// ============================================================
+function hostCreateRoom(name){
+  isHost=true; myName=name; myId=0; mySeat=0;
+  const code=genRoomCode();
+  gs=newGameState();
+  gs.players[0].name=name;
+
+  peer=new Peer(PEER_PREFIX+code,{debug:0});
+  peer.on('open',()=>{connected=true;viewPhase='lobby';render()});
+  peer.on('error',(e)=>{
+    console.error('Peer error:',e);
+    if(e.type==='unavailable'){alert('房间码冲突，请重试');return}
+    connected=false;render()
+  });
+  peer.on('connection',(conn)=>{
+    if(gs.phase!=='lobby'){conn.close();return}
+    if(hostConns.length>=3){conn.close();return}
+    conn.on('open',()=>{
+      const seat=hostConns.length+1;
+      conn.metadata={seat};
+      hostConns.push(conn);
+      gs.players.push({name:'',seat});
+      conn.on('data',(d)=>handleHostMsg(conn,d));
+      conn.on('close',()=>{
+        hostConns=hostConns.filter(c=>c!==conn);
+        gs.players=gs.players.filter(p=>p.seat!==seat);
+        hostBroadcastView();
+      });
+      hostBroadcastView();
+    });
+  });
+}
+
+function hostBroadcastView(){
+  hostConns.forEach(c=>{
+    if(c.open&&c.metadata)sendTo(c,{type:'view',...buildView(c.metadata.seat)});
+  });
+  renderHostView();
+}
+
+function renderHostView(){
+  if(!gs)return;
+  const v=buildView(0);
+  viewPhase=v.phase;viewData=v;render();
+}
+
+function buildView(seat){
+  let team=-1;
+  for(let t=0;t<2;t++)if(gs.teams[t].includes(seat))team=t;
+  const isEnc=team>=0&&gs.encIdx[team]===gs.teams[team].indexOf(seat);
+  const v={phase:gs.phase,round:gs.round,maxRounds:gs.maxRounds,myTeam:team,mySeat:seat,
+    isEncryptor:isEnc,teams:gs.teams.map(t=>t.map(s=>{const p=gs.players.find(x=>x.seat===s);return p?p.name:'?'})),
+    scores:{...gs.scores},winner:gs.winner,players:gs.players.map(p=>p.name)};
+
+  if(gs.phase==='clue_entry'&&team===gs.activeTeam&&isEnc){
+    v.action='enter_clues';v.myWords=gs.words[team];v.myCode=gs.codes[team];
+  }else if(gs.phase==='clue_entry'){
+    v.action='wait';v.waitText=gs.activeTeam===0?'A':'B';
+    v.waitText=`${v.waitText}队加密者正在思考线索...`;
+  }else if(gs.phase==='guess_intercept'){
+    const ot=1-gs.activeTeam;
+    if(team===ot){v.action='guess_intercept';v.clues=gs.clues[gs.activeTeam];v.history=gs.history[gs.activeTeam];v.targetLabel=gs.activeTeam===0?'A':'B'}
+    else{v.action='wait';v.waitText=`${ot===0?'A':'B'}队正在尝试破译...`}
+  }else if(gs.phase==='guess_decode'){
+    if(team===gs.activeTeam){v.action='guess_decode';v.myWords=gs.words[team];v.clues=gs.clues[gs.activeTeam]}
+    else{v.action='wait';v.waitText=`${gs.activeTeam===0?'A':'B'}队正在解密...`}
+  }else if(gs.phase==='round_results'){
+    v.results=[];
+    for(let t=0;t<2;t++){
+      const ot=1-t,code=gs.codes[t],words=gs.words[t];
+      const ig=gs.guesses.intercept[t],dg=gs.guesses.decode[t];
+      v.results.push({team:t,code,codeWords:code.map(d=>words[d-1]),clues:gs.clues[t],
+        ig,dg,igOk:ig&&ig.length===3&&ig.every((x,i)=>x===code[i]),
+        dgOk:dg&&dg.length===3&&dg.every((x,i)=>x===code[i])});
+    }
+  }else if(gs.phase==='tiebreaker'){
+    if(team>=0&&!gs.tiebreak[team]){v.action='tiebreaker';v.history=gs.history[1-team];v.targetLabel=(1-team)===0?'A':'B'}
+    else{v.action='wait';v.waitText='等待对方提交猜测...'}
+  }else if(gs.phase==='game_over'){
+    v.allWords=gs.words;v.allHistory=gs.history;
+    if(gs.tiebreak[0]&&gs.tiebreak[1]){
+      v.tbResults=[];
+      for(let t=0;t<2;t++){
+        const ot=1-t,corr=[];let sc=0;
+        for(let i=0;i<4;i++){const ok=gs.tiebreak[t][i]===gs.words[ot][i];corr.push(ok);if(ok)sc++}
+        v.tbResults.push({team:t,guesses:gs.tiebreak[t],answers:gs.words[ot],correct:corr,score:sc});
+      }
+    }
+  }
+
+  if(team>=0)v.myWords=gs.words[team];
+  return v;
+}
+
+function handleHostMsg(conn,data){
+  if(!gs)return;
+  const seat=conn.metadata?.seat;
+  switch(data.action){
+    case 'set_name':
+      const p=gs.players.find(x=>x.seat===seat);
+      if(p){p.name=(data.name||'').slice(0,8);hostBroadcastView()}
+      break;
+    case 'start_game':
+      if(gs.phase==='lobby'&&gs.players.length>=2){
+        // Fill empty seats with bots
+        while(gs.players.length<4){
+          const s=gs.players.length;
+          gs.players.push({name:'AI-'+(s-1),seat:s,isBot:true});
+        }
+        if(hostStartGame())hostBroadcastView();
+      }
+      break;
+    case 'submit_clues':
+      if(gs.phase==='clue_entry'&&seat===gs.teams[gs.activeTeam][gs.encIdx[gs.activeTeam]]){
+        const clues=data.clues;
+        if(clues&&clues.length===3&&clues.every(c=>c.trim())){
+          gs.clues[gs.activeTeam]=clues;
+          gs.history[gs.activeTeam].push({round:gs.round,clues:[...clues]});
+          gs.phase='guess_intercept';
+          hostBroadcastView();
+        }
+      }
+      break;
+    case 'submit_intercept':{
+      if(gs.phase!=='guess_intercept')break;
+      const ot=1-gs.activeTeam;
+      if(!gs.teams[ot].includes(seat))break;
+      const guess=data.guess;
+      if(!guess||guess.length!==3)break;
+      gs.guesses.intercept[gs.activeTeam]=guess;
+      gs.phase='guess_decode';
+      hostBroadcastView();
+      break;
+    }
+    case 'submit_decode':{
+      if(gs.phase!=='guess_decode')break;
+      const at=gs.activeTeam;
+      if(!gs.teams[at].includes(seat))break;
+      const guess=data.guess;
+      if(!guess||guess.length!==3)break;
+      gs.guesses.decode[at]=guess;
+      // Process this team's result, then move on
+      if(at===0){
+        // Process team A turn, then start team B
+        processTeamResult(0);
+        gs.activeTeam=1;
+        gs.guesses.intercept[1]=[];
+        gs.guesses.decode[1]=[];
+        gs.phase='clue_entry';
+        hostBroadcastView();
+      }else{
+        processTeamResult(1);
+        // Both teams done, check game over
+        const go=checkEnd();
+        if(go>=0){gs.winner=go;gs.phase='game_over'}
+        else if(gs.round>=gs.maxRounds){gs.phase='tiebreaker'}
+        else{gs.phase='round_results'}
+        hostBroadcastView();
+      }
+      break;
+    }
+    case 'next_round':
+      if(gs.phase==='round_results'){
+        gs.round++;gs.encIdx=[1-gs.encIdx[0],1-gs.encIdx[1]];
+        newRoundCodes();gs.phase='round_start';
+        setTimeout(()=>{gs.phase='clue_entry';gs.activeTeam=0;gs.guesses={intercept:[[],[]],decode:[[],[]]};hostBroadcastView()},2000);
+        hostBroadcastView();
+      }
+      break;
+    case 'submit_tiebreak':{
+      if(gs.phase!=='tiebreaker')break;
+      const team=gs.teams.findIndex(t=>t.includes(seat));
+      if(team<0||gs.tiebreak[team])break;
+      gs.tiebreak[team]=data.guesses;
+      if(gs.tiebreak[0]&&gs.tiebreak[1]){
+        let s=[0,0];
+        for(let t=0;t<2;t++){const ot=1-t;for(let i=0;i<4;i++){if(gs.tiebreak[t][i]===gs.words[ot][i])s[t]++}}
+        gs.winner=s[0]>s[1]?0:s[1]>s[0]?1:2;
+        gs.phase='game_over';
+      }
+      hostBroadcastView();
+      break;
+    }
+    case 'restart':
+      if(gs.phase==='game_over'){
+        gs=newGameState();gs.players=[{name:myName,seat:0}];
+        hostConns.forEach((c,i)=>{const s=i+1;c.metadata={seat:s};gs.players.push({name:'',seat:s})});
+        hostBroadcastView();
+      }
+      break;
+  }
+}
+
+function newRoundCodes(){
+  for(let t=0;t<2;t++){
+    const d=[1,2,3,4],c=[];
+    for(let i=0;i<3;i++)c.push(d.splice(Math.floor(Math.random()*d.length),1)[0]);
+    gs.codes[t]=c;
+  }
+  gs.clues=[['','',''],['','','']];
+}
+
+function hostStartGame(){
+  if(gs.players.length<2)return false;
+  const seats=gs.players.map(p=>p.seat);
+  // Shuffle seats for team assignment
+  for(let i=seats.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seats[i],seats[j]]=[seats[j],seats[i]]}
+  gs.teams=[seats.slice(0,2).sort(),seats.slice(2,4).sort()];
+  const pool=[...WORDS].sort(()=>Math.random()-.5);
+  gs.words=[pool.slice(0,4),pool.slice(4,8)];
+  gs.round=1;gs.encIdx=[0,0];
+  newRoundCodes();
+  gs.phase='round_start';
+  // Auto-advance after 3 seconds
+  setTimeout(()=>{if(gs&&gs.phase==='round_start'){gs.phase='clue_entry';gs.activeTeam=0;hostBroadcastView()}},3000);
+  return true;
+}
+
+function processTeamResult(t){
+  const ot=1-t,code=gs.codes[t];
+  const ig=gs.guesses.intercept[t];
+  const dg=gs.guesses.decode[t];
+  if(ig&&ig.length===3&&ig.every((x,i)=>x===code[i]))gs.scores.intercept[ot]++;
+  if(dg&&dg.length===3&&!dg.every((x,i)=>x===code[i]))gs.scores.miss[t]++;
+}
+
+function checkEnd(){
+  for(let t=0;t<2;t++){
+    if(gs.scores.intercept[t]>=2)return t;
+    if(gs.scores.miss[t]>=2)return 1-t;
+  }
+  return -1;
+}
+
+// ============================================================
+// GUEST LOGIC
+// ============================================================
+function guestJoin(code,name){
+  isHost=false;myName=name;
+  peer=new Peer(undefined,{debug:0});
+  peer.on('open',()=>{
+    connected=true;
+    const conn=peer.connect(PEER_PREFIX+code,{metadata:{name},reliable:true});
+    conn.on('open',()=>{guestConn=conn;mySeat=0;viewPhase='lobby';viewData={};render()});
+    conn.on('data',(d)=>{
+      if(d.type==='view'){
+        mySeat=d.mySeat;myTeam=d.myTeam;
+        viewPhase=d.phase;viewData=d;render();
+      }
+    });
+    conn.on('close',()=>{connected=false;viewPhase='disconnected';render()});
+    conn.on('error',(e)=>{console.error(e);connected=false;viewPhase='disconnected';render()});
+    setTimeout(()=>{if(!guestConn){connected=false;viewPhase='disconnected';render()}},10000);
+  });
+  peer.on('error',(e)=>{
+    console.error('Peer error:',e);
+    if(e.type==='peer-unavailable'){alert('找不到该房间，请检查房间码是否正确');viewPhase='menu';render();return}
+    connected=false;render();
+  });
+}
+
+function guestSend(msg){if(guestConn&&guestConn.open)sendTo(guestConn,msg)}
+
+// ============================================================
+// RENDERING
+// ============================================================
+const $=id=>document.getElementById(id);
+
+function render(){
+  const app=document.getElementById('app');
+  let html='';
+  if(viewPhase==='menu')html=renderMenu();
+  else if(viewPhase==='disconnected')html=renderDisconnected();
+  else{
+    const d=isHost?buildView(0):viewData;
+    html=renderConnBar();
+    switch(d.phase){
+      case'lobby':html+=renderLobby(d);break;
+      case'round_start':html+=renderRoundStart(d);break;
+      case'clue_entry':html+=renderClueEntry(d);break;
+      case'guess_intercept':html+=renderGuessPhase(d);break;
+      case'guess_decode':html+=renderGuessPhase(d);break;
+      case'round_results':html+=renderRoundResults(d);break;
+      case'tiebreaker':html+=renderTiebreaker(d);break;
+      case'game_over':html+=renderGameOver(d);break;
+    }
+  }
+  app.innerHTML=html;
+  bindEvents();
+}
+
+function renderConnBar(){
+  return `<div class="conn-bar ${connected?'ok':'err'}">${connected?'已连接':'连接断开...'}</div>`;
+}
+
+function renderMenu(){
+  const params=new URLSearchParams(location.search);
+  const roomFromUrl=params.get('room');
+  return`
+    <div style="padding-top:40px">
+      <h1>谍 报 风 云</h1>
+      <p class="subtitle">在线版 &mdash; 无需安装，打开即玩</p>
+      <div class="tab-btns">
+        <button class="tab-btn active" id="tabCreate" onclick="switchTab('create')">创建房间</button>
+        <button class="tab-btn" id="tabJoin" onclick="switchTab('join')">${roomFromUrl?'加入房间 ('+roomFromUrl+')':'加入房间'}</button>
+      </div>
+      <div id="panelCreate" class="card" style="text-align:center">
+        <span class="label">你的昵称</span>
+        <input type="text" id="hostName" placeholder="输入昵称" maxlength="8" class="mb">
+        <button class="btn btn-primary btn-block" id="createBtn">创建房间</button>
+      </div>
+      <div id="panelJoin" class="card" style="display:none;text-align:center">
+        <span class="label">你的昵称</span>
+        <input type="text" id="guestName" placeholder="输入昵称" maxlength="8" class="mb">
+        <span class="label">房间码</span>
+        <input type="text" id="roomCode" placeholder="输入4位房间码" maxlength="4" value="${roomFromUrl||''}" class="mb" style="text-align:center;font-size:1.3em;letter-spacing:6px;font-weight:700;text-transform:uppercase">
+        <button class="btn btn-primary btn-block" id="joinBtn">加入房间</button>
+      </div>
+      <div class="center mt"><button class="btn btn-secondary btn-sm" onclick="document.getElementById('rulesModal').classList.add('active')">游戏规则</button></div>
+    </div>`;
+}
+
+function renderDisconnected(){
+  return`<div class="wait-box" style="padding-top:120px">
+    <div class="icon">📡</div>
+    <h2>连接已断开</h2>
+    <p>房主可能已关闭游戏</p>
+    <div class="mt"><button class="btn btn-primary" onclick="viewPhase='menu';render()">返回主页</button></div>
+  </div>`;
+}
+
+function renderLobby(d){
+  const players=d.players||[];
+  const roomCode=isHost?peer?.id?.replace(PEER_PREFIX,''):'';
+  const shareUrl=location.origin+location.pathname+'?room='+roomCode;
+
+  let html=`<h2>等待玩家加入</h2>`;
+
+  if(isHost){
+    html+=`
+      <div class="card" style="text-align:center">
+        <span class="label">房间码</span>
+        <div class="room-code">${roomCode}</div>
+        <p style="color:var(--muted);font-size:.85em;margin-bottom:10px">分享此房间码给朋友</p>
+        <div class="share-box" onclick="copyShare()" id="shareBox">${shareUrl}</div>
+        <p style="color:var(--dim);font-size:.75em;margin-top:6px">点击复制邀请链接</p>
+      </div>`;
+  }
+
+  html+=`<div class="card"><h3>玩家 (${players.length}/4)</h3>`;
+  for(let i=0;i<4;i++){
+    const name=players[i]||'';
+    const color=name?'var(--cyan)':'var(--dim)';
+    html+=`<div class="player-list-item">
+      <div class="player-dot" style="background:${name?'var(--cyan)':'var(--dim)'}"></div>
+      <span style="color:${color}">${name||'等待中...'}</span>
+      ${i===0?'<span class="my-tag">房主</span>':''}
+      ${name===myName&&!isHost?'<span class="my-tag">我</span>':''}
+    </div>`;
+  }
+  html+=`</div>`;
+
+  if(isHost&&players.length>=2){
+    html+=`<div class="center"><button class="btn btn-primary btn-block" id="startBtn">开始游戏${players.length<4?' ('+players.length+'人)':''}</button></div>`;
+    if(players.length<4)html+=`<p class="center" style="color:var(--dim);font-size:.82em;margin-top:8px">空位将由AI代替</p>`;
+  }else if(!isHost){
+    html+=`<div class="wait-box" style="padding:20px"><p>等待房主开始游戏...</p></div>`;
+  }else{
+    html+=`<p class="center" style="color:var(--dim);margin-top:12px">至少需要 2 名玩家</p>`;
+  }
+
+  return html;
+}
+
+function renderRoundStart(d){
+  const enc=d.encryptors||['?','?'];
+  return`
+    ${renderScoreBar(d)}
+    <h2>第 ${d.round} 轮开始</h2>
+    <div class="flex">
+      <div class="card team-a flex-1"><span class="tl a">A 队</span>
+        <p style="margin-top:6px">加密者：<strong>${enc[0]}</strong></p>
+        ${d.myTeam===0?'<span class="my-tag">你的队伍</span>':''}
+      </div>
+      <div class="card team-b flex-1"><span class="tl b">B 队</span>
+        <p style="margin-top:6px">加密者：<strong>${enc[1]}</strong></p>
+        ${d.myTeam===1?'<span class="my-tag">你的队伍</span>':''}
+      </div>
+    </div>
+    <div class="wait-box" style="padding:24px"><p>各队加密者请准备好！</p></div>`;
+}
+
+function renderClueEntry(d){
+  if(d.action==='enter_clues'){
+    const words=d.myWords,code=d.myCode;
+    return`
+      ${renderScoreBar(d)}
+      <div class="card ${d.myTeam===0?'team-a':'team-b'}">
+        ${d.myTeam===0?'<span class="tl a">A 队</span>':'<span class="tl b">B 队</span>'}
+        <span class="my-tag">你是加密者</span>
+        <h3 style="margin-top:10px">你的队伍词语</h3>
+        <div class="word-grid mb">
+          ${words.map((w,i)=>`<div class="word-card"><div class="num">${i+1}</div><div class="word">${w}</div></div>`).join('')}
+        </div>
+        <h3>本轮密码</h3>
+        <div class="code-digits">${code.map(d=>`<div class="code-digit">${d}</div>`).join('')}</div>
+        <p style="color:var(--muted);font-size:.82em;text-align:center;margin-bottom:14px">
+          ${code.map(d=>`${d}→「${words[d-1]}」`).join('，')}</p>
+        <h3>请输入线索词</h3>
+        ${code.map((d,i)=>`
+          <div class="guess-row">
+            <div style="font-weight:700;color:var(--cyan);min-width:22px">${d}</div>
+            <div class="hint-word">${words[d-1]}</div>
+            <div class="arrow">→</div>
+            <input type="text" id="clue_${i}" class="clue-input" placeholder="线索词" autocomplete="off">
+          </div>`).join('')}
+        <div class="center mt"><button class="btn btn-primary" id="submitCluesBtn">确认线索</button></div>
+      </div>`;
+  }
+  return`${renderScoreBar(d)}<div class="wait-box"><div class="icon">🔐</div><p>${d.waitText||'加密者正在思考线索...'}<br><span style="font-size:.85em;color:var(--dim)">请等待</span></p></div>`;
+}
+
+function renderGuessPhase(d){
+  if(d.action==='guess_intercept'){
+    const clues=d.clues||[];
+    return`
+      ${renderScoreBar(d)}
+      <div class="card ${d.myTeam===0?'team-a':'team-b'}">
+        ${d.myTeam===0?'<span class="tl a">A 队</span>':'<span class="tl b">B 队</span>'}
+        <span class="my-tag">你的回合 - 破译</span>
+        <p style="color:var(--muted);margin:6px 0 14px">根据${d.targetLabel}队线索，猜测其3位密码</p>
+        <h3>${d.targetLabel}队线索</h3>
+        <div style="display:flex;gap:14px;justify-content:center;margin-bottom:16px">
+          ${clues.map((c,i)=>`<div style="text-align:center"><div style="font-size:.78em;color:var(--muted)">线索${i+1}</div><div style="font-size:1.15em;font-weight:700;color:${d.targetLabel==='A'?'var(--teamA)':'var(--teamB)'};margin-top:3px">${c}</div></div>`).join('')}
+        </div>
+        ${renderHistory(d.history)}
+        <h3>输入猜测密码（数字 1-4）</h3>
+        <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px">
+          ${[0,1,2].map(i=>`<div style="text-align:center"><div style="font-size:.78em;color:var(--muted);margin-bottom:5px">第${i+1}位</div><input type="text" id="g_${i}" class="guess-input" maxlength="1" autocomplete="off" inputmode="numeric"></div>`).join('')}
+        </div>
+        <div class="center"><button class="btn btn-primary" id="submitGuessBtn">确认猜测</button></div>
+      </div>`;
+  }
+  if(d.action==='guess_decode'){
+    const words=d.myWords,clues=d.clues||[];
+    return`
+      ${renderScoreBar(d)}
+      <div class="card ${d.myTeam===0?'team-a':'team-b'}">
+        ${d.myTeam===0?'<span class="tl a">A 队</span>':'<span class="tl b">B 队</span>'}
+        <span class="my-tag">你的回合 - 解密</span>
+        <h3 style="margin-top:10px">你队词语</h3>
+        <div class="word-grid mb">
+          ${words.map((w,i)=>`<div class="word-card"><div class="num">${i+1}</div><div class="word">${w}</div></div>`).join('')}
+        </div>
+        <h3>加密者线索</h3>
+        <div style="display:flex;gap:14px;justify-content:center;margin-bottom:16px">
+          ${clues.map((c,i)=>`<div style="text-align:center"><div style="font-size:.78em;color:var(--muted)">线索${i+1}</div><div style="font-size:1.15em;font-weight:700;color:var(--cyan);margin-top:3px">${c}</div></div>`).join('')}
+        </div>
+        <h3>输入猜测密码（数字 1-4）</h3>
+        <div style="display:flex;gap:12px;justify-content:center;margin-bottom:16px">
+          ${[0,1,2].map(i=>`<div style="text-align:center"><div style="font-size:.78em;color:var(--muted);margin-bottom:5px">第${i+1}位</div><input type="text" id="g_${i}" class="guess-input" maxlength="1" autocomplete="off" inputmode="numeric"></div>`).join('')}
+        </div>
+        <div class="center"><button class="btn btn-primary" id="submitGuessBtn">确认猜测</button></div>
+      </div>`;
+  }
+  return`${renderScoreBar(d)}<div class="wait-box"><div class="icon">⏳</div><p>${d.waitText||'其他玩家操作中...'}<br><span style="font-size:.85em;color:var(--dim)">请等待</span></p></div>`;
+}
+
+function renderRoundResults(d){
+  let html=renderScoreBar(d)+`<h2>第 ${d.round} 轮结果</h2>`;
+  for(const r of d.results){
+    const tl=r.team===0?'A':'B',ol=r.team===0?'B':'A';
+    const codeStr=r.code.join('-'),igStr=r.ig&&r.ig.length?r.ig.join('-'):'—',dgStr=r.dg&&r.dg.length?r.dg.join('-'):'—';
+    html+=`<div class="card ${r.team===0?'team-a':'team-b'}" style="margin-top:12px">
+      <span class="tl ${r.team===0?'a':'b'}">${tl} 队</span>
+      <div style="margin-top:8px">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+          <div><span class="label">密码</span><strong style="font-size:1.1em;color:var(--cyan)">${codeStr}</strong></div>
+          <div><span class="label">含义</span><strong>${r.codeWords.join(' → ')}</strong></div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+          ${r.clues.map((c,i)=>`<div><span class="label">线索${i+1}(→${r.code[i]})</span><strong>${c}</strong></div>`).join('')}
+        </div>
+      </div>
+      <div class="result-card ${r.igOk?'fail':'success'}">
+        <span class="result-icon">${r.igOk?'🔓':'🔒'}</span>${ol}队破译${r.igOk?`成功（猜 ${igStr}）→ 获得破译标记`:`失败（猜 ${igStr}）`}
+      </div>
+      <div class="result-card ${r.dgOk?'success':'fail'}">
+        <span class="result-icon">${r.dgOk?'✅':'❌'}</span>${tl}队解密${r.dgOk?'成功':`失败（猜 ${dgStr}，正确 ${codeStr}）→ 敌方获得失败标记`}
+      </div>
+    </div>`;
+  }
+  html+=`<div class="card mt" style="text-align:center"><h3>当前分数</h3>
+    <div class="flex" style="margin-top:10px">
+      <div class="flex-1 center"><span class="tl a">A 队</span><div style="margin-top:6px;font-size:.85em">破译 <strong style="color:var(--gold)">${d.scores.intercept[0]}</strong>/2 &nbsp; 失败 <strong style="color:var(--teamB)">${d.scores.miss[0]}</strong>/2</div></div>
+      <div class="flex-1 center"><span class="tl b">B 队</span><div style="margin-top:6px;font-size:.85em">破译 <strong style="color:var(--gold)">${d.scores.intercept[1]}</strong>/2 &nbsp; 失败 <strong style="color:var(--teamB)">${d.scores.miss[1]}</strong>/2</div></div>
+    </div></div>`;
+  html+=`<div class="center mt" style="margin-top:16px"><button class="btn btn-primary" id="nextRoundBtn">进入第 ${d.round+1} 轮</button></div>`;
+  return html;
+}
+
+function renderTiebreaker(d){
+  if(d.action==='tiebreaker'){
+    return`${renderScoreBar(d)}<h2>加时赛</h2>
+      <p style="color:var(--muted);text-align:center;margin-bottom:14px">8轮后无人胜出！猜测对方全部4个词语</p>
+      <div class="card ${d.myTeam===0?'team-a':'team-b'}">
+        ${d.myTeam===0?'<span class="tl a">A 队</span>':'<span class="tl b">B 队</span>'}
+        <p style="color:var(--muted);font-size:.85em;margin:8px 0 12px">猜测${d.targetLabel}队编号 1-4 的词语</p>
+        ${renderHistory(d.history)}
+        ${[0,1,2,3].map(i=>`<div class="guess-row"><div style="font-weight:700;color:var(--cyan);min-width:28px">#${i+1}</div><div class="arrow">→</div><input type="text" id="tb_${i}" class="clue-input" placeholder="猜测词语" autocomplete="off" style="flex:1"></div>`).join('')}
+        <div class="center mt"><button class="btn btn-primary" id="submitTbBtn">提交猜测</button></div>
+      </div>`;
+  }
+  return`${renderScoreBar(d)}<div class="wait-box"><div class="icon">⏳</div><p>等待对方提交猜测...</p></div>`;
+}
+
+function renderGameOver(d){
+  const w=d.winner;
+  let html='';
+  if(w===2){html+=`<div class="winner-text" style="color:var(--muted)">平 局 ！</div>`}
+  else{
+    const wl=w===0?'A':'B';
+    html+=`<div class="winner-text" style="color:${w===0?'var(--teamA)':'var(--teamB)'};">${wl} 队 胜 利 ！</div>`;
+    if(d.scores.intercept[w]>=2)html+=`<p class="center" style="color:var(--gold);margin-bottom:16px">成功破译对方密码 2 次</p>`;
+    else html+=`<p class="center" style="color:var(--muted);margin-bottom:16px">对方通讯失败 2 次</p>`;
+  }
+  if(d.allWords){
+    html+=`<div class="flex">
+      <div class="card team-a flex-1"><span class="tl a">A 队词语</span><div style="margin-top:6px">${d.allWords[0].map((w,i)=>`<div style="margin:3px 0"><strong>${i+1}.</strong> ${w}</div>`).join('')}</div></div>
+      <div class="card team-b flex-1"><span class="tl b">B 队词语</span><div style="margin-top:6px">${d.allWords[1].map((w,i)=>`<div style="margin:3px 0"><strong>${i+1}.</strong> ${w}</div>`).join('')}</div></div>
+    </div>`;
+  }
+  if(d.tbResults){
+    html+=`<h2 style="margin-top:14px">加时赛结果</h2>`;
+    for(const tb of d.tbResults){
+      html+=`<div class="card ${tb.team===0?'team-a':'team-b'}"><span class="tl ${tb.team===0?'a':'b'}">${tb.team===0?'A':'B'} 队</span> <span style="color:var(--muted)">正确 ${tb.score}/4</span><div style="margin-top:8px">
+        ${tb.guesses.map((g,i)=>`<div class="result-card ${tb.correct[i]?'success':'fail'}"><span class="result-icon">${tb.correct[i]?'✅':'❌'}</span>#${i+1}：猜「${g}」→ 正确「${tb.answers[i]}」</div>`).join('')}
+      </div></div>`;
+    }
+  }
+  if(d.allHistory){
+    html+=`<div class="card mt"><h3>完整线索记录</h3><div class="flex" style="margin-top:10px">
+      <div class="flex-1"><span class="tl a">A 队</span><table class="history-table"><tr><th>轮</th><th>1</th><th>2</th><th>3</th></tr>${d.allHistory[0].map(h=>`<tr><td>R${h.round}</td><td>${h.clues[0]}</td><td>${h.clues[1]}</td><td>${h.clues[2]}</td></tr>`).join('')}</table></div>
+      <div class="flex-1"><span class="tl b">B 队</span><table class="history-table"><tr><th>轮</th><th>1</th><th>2</th><th>3</th></tr>${d.allHistory[1].map(h=>`<tr><td>R${h.round}</td><td>${h.clues[0]}</td><td>${h.clues[1]}</td><td>${h.clues[2]}</td></tr>`).join('')}</table></div>
+    </div></div>`;
+  }
+  html+=`<div class="center mt" style="margin-top:16px"><button class="btn btn-primary" id="restartBtn">再来一局</button> <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="location.href=location.pathname">返回主页</button></div>`;
+  return html;
+}
+
+function renderScoreBar(d){
+  if(!d||d.myTeam===undefined||d.myTeam<0)return'';
+  const s=d.scores;
+  return`<div class="score-bar">
+    <div class="score-team"><span class="name" style="color:var(--teamA)">A队</span><div class="tokens">${renderTokens(s.intercept[0],s.miss[0])}</div></div>
+    <div class="round-badge">第 ${d.round} 轮 / ${d.maxRounds}</div>
+    <div class="score-team"><div class="tokens">${renderTokens(s.intercept[1],s.miss[1])}</div><span class="name" style="color:var(--teamB)">B队</span></div>
+  </div>`;
+}
+
+function renderTokens(intercept,miss){
+  let h='';
+  for(let i=0;i<2;i++)h+=`<div class="token ${i<intercept?'intercept':''}"></div>`;
+  h+='<span style="margin:0 3px;color:var(--dim)">|</span>';
+  for(let i=0;i<2;i++)h+=`<div class="token ${i<miss?'miss':''}"></div>`;
+  return h;
+}
+
+function renderHistory(hist){
+  if(!hist||hist.length<1)return'';
+  return`<h3>历史线索</h3><div style="overflow-x:auto;margin-bottom:14px"><table class="history-table"><tr><th>轮次</th><th>线索1</th><th>线索2</th><th>线索3</th></tr>${hist.map(h=>`<tr><td style="color:var(--muted)">R${h.round}</td><td>${h.clues[0]}</td><td>${h.clues[1]}</td><td>${h.clues[2]}</td></tr>`).join('')}</table></div>`;
+}
+
+// ============================================================
+// EVENT BINDING
+// ============================================================
+function bindEvents(){
+  const el=id=>document.getElementById(id);
+
+  // Menu
+  const createBtn=el('createBtn');
+  if(createBtn)createBtn.onclick=()=>{
+    const name=(el('hostName')||{}).value;
+    if(!name||!name.trim()){alert('请输入昵称');return}
+    hostCreateRoom(name.trim());
+  };
+  const joinBtn=el('joinBtn');
+  if(joinBtn)joinBtn.onclick=()=>{
+    const name=(el('guestName')||{}).value;
+    const code=(el('roomCode')||{}).value;
+    if(!name||!name.trim()){alert('请输入昵称');return}
+    if(!code||code.trim().length<3){alert('请输入房间码');return}
+    guestJoin(code.trim().toUpperCase(),name.trim());
+  };
+
+  // Lobby
+  const setNameBtn=el('setNameBtn');
+  if(setNameBtn&&!isHost)setNameBtn.onclick=()=>{
+    const name=(el('nameInput')||{}).value;
+    if(name&&name.trim()){myName=name.trim();guestSend({action:'set_name',name:myName})}
+  };
+  // Guest name input in lobby
+  const nameInput=el('nameInput');
+  if(nameInput&&!isHost){
+    nameInput.value=myName;
+    nameInput.onchange=()=>{
+      const name=nameInput.value.trim();
+      if(name){myName=name;guestSend({action:'set_name',name})}
+    };
+  }
+
+  const startBtn=el('startBtn');
+  if(startBtn){
+    if(isHost)startBtn.onclick=()=>hostBroadcastView()||true; // just triggers re-render; actual logic below
+    // Host start
+    if(isHost)startBtn.onclick=()=>{
+      if(gs&&gs.phase==='lobby'&&gs.players.length>=2){
+        while(gs.players.length<4){const s=gs.players.length;gs.players.push({name:'AI-'+(s),seat:s,isBot:true})}
+        if(hostStartGame())hostBroadcastView();
+      }
+    };
+    // Guest start request
+    if(!isHost)startBtn.onclick=()=>guestSend({action:'start_game'});
+  }
+
+  // Clues
+  const submitCluesBtn=el('submitCluesBtn');
+  if(submitCluesBtn)submitCluesBtn.onclick=()=>{
+    const clues=[0,1,2].map(i=>(el('clue_'+i)||{}).value||'');
+    if(clues.some(c=>!c.trim())){alert('请输入所有线索词');return}
+    if(isHost){handleHostMsg({metadata:{seat:0}},{action:'submit_clues',clues})}
+    else guestSend({action:'submit_clues',clues});
+  };
+
+  // Guesses
+  const submitGuessBtn=el('submitGuessBtn');
+  if(submitGuessBtn)submitGuessBtn.onclick=()=>{
+    const guess=[0,1,2].map(i=>parseInt((el('g_'+i)||{}).value));
+    if(guess.some(g=>isNaN(g)||g<1||g>4)){alert('请输入有效数字（1-4）');return}
+    const d=isHost?buildView(0):viewData;
+    const action=d.phase==='guess_intercept'?'submit_intercept':'submit_decode';
+    if(isHost)handleHostMsg({metadata:{seat:0}},{action,guess});
+    else guestSend({action,guess});
+  };
+
+  // Next round
+  const nextRoundBtn=el('nextRoundBtn');
+  if(nextRoundBtn){
+    if(isHost)nextRoundBtn.onclick=()=>handleHostMsg({metadata:{seat:0}},{action:'next_round'});
+    else nextRoundBtn.onclick=()=>guestSend({action:'next_round'});
+  }
+
+  // Tiebreaker
+  const submitTbBtn=el('submitTbBtn');
+  if(submitTbBtn)submitTbBtn.onclick=()=>{
+    const guesses=[0,1,2,3].map(i=>(el('tb_'+i)||{}).value||'');
+    if(guesses.some(g=>!g.trim())){alert('请输入所有猜测');return}
+    if(isHost)handleHostMsg({metadata:{seat:0}},{action:'submit_tiebreak',guesses});
+    else guestSend({action:'submit_tiebreak',guesses});
+  };
+
+  // Restart
+  const restartBtn=el('restartBtn');
+  if(restartBtn){
+    if(isHost)restartBtn.onclick=()=>handleHostMsg({metadata:{seat:0}},{action:'restart'});
+    else restartBtn.onclick=()=>guestSend({action:'restart'});
+  }
+
+  // Auto-focus first input
+  const firstInput=document.querySelector('input.clue-input, input.guess-input');
+  if(firstInput)setTimeout(()=>firstInput.focus(),100);
+}
+
+// Tab switching for menu
+function switchTab(tab){
+  const tc=document.getElementById('tabCreate'),tj=document.getElementById('tabJoin');
+  const pc=document.getElementById('panelCreate'),pj=document.getElementById('panelJoin');
+  if(tab==='create'){tc.classList.add('active');tj.classList.remove('active');pc.style.display='';pj.style.display='none'}
+  else{tj.classList.add('active');tc.classList.remove('active');pc.style.display='none';pj.style.display=''}
+}
+// Auto-switch tab if room code in URL
+if(new URLSearchParams(location.search).get('room')){switchTab('join')}
+
+// Copy share link
+function copyShare(){
+  const box=document.getElementById('shareBox');
+  if(!box)return;
+  navigator.clipboard.writeText(box.textContent).then(()=>{
+    const orig=box.textContent;box.textContent='已复制到剪贴板！';
+    setTimeout(()=>{box.textContent=orig},1500);
+  }).catch(()=>{
+    // Fallback
+    const ta=document.createElement('textarea');ta.value=box.textContent;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    const orig=box.textContent;box.textContent='已复制！';setTimeout(()=>{box.textContent=orig},1500);
+  });
+}
+
+// Init render
+viewPhase='menu';
+render();
+</script>
+</body>
+</html>
