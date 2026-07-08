@@ -912,8 +912,9 @@ function tryLoadPeer(){
   s.onload=()=>{
     peerLoaded=true;
     showPeerStatus('');
-    document.getElementById('peerStatus')?.style.setProperty('display','none');
-    render(); // re-render to update UI
+    const ps=document.getElementById('peerStatus');
+    if(ps)ps.style.display='none';
+    // Don't call render() here - it would reset tab state
   };
   s.onerror=()=>{
     cdnIdx++;
