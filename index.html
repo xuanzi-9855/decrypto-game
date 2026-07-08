@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>谍报风云 - 在线版</title>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!-- PeerJS loaded async below -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -181,6 +181,7 @@ function newGameState(){
 // HOST LOGIC
 // ============================================================
 function hostCreateRoom(name){
+  if(typeof Peer==='undefined'){alert('网络连接组件尚未加载完成，请稍候再试');return}
   isHost=true; myName=name; myId=0; mySeat=0;
   const code=genRoomCode();
   gs=newGameState();
@@ -417,6 +418,7 @@ function checkEnd(){
 // GUEST LOGIC
 // ============================================================
 function guestJoin(code,name){
+  if(typeof Peer==='undefined'){alert('网络连接组件尚未加载完成，请稍候再试');return}
   isHost=false;myName=name;
   peer=new Peer(undefined,{debug:0});
   peer.on('open',()=>{
@@ -879,6 +881,53 @@ function copyShare(){
 // Init render
 viewPhase='menu';
 render();
+
+// Async load PeerJS with CDN fallback
+const CDN_SOURCES=[
+  'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+  'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'
+];
+let peerLoaded=false,cdnIdx=0;
+
+function showPeerStatus(msg){
+  const el=document.getElementById('peerStatus');
+  if(el)el.textContent=msg;
+}
+
+function tryLoadPeer(){
+  if(cdnIdx>=CDN_SOURCES.length){
+    showPeerStatus('网络连接组件加载失败，请检查网络后刷新页面');
+    // Enable buttons anyway so user can at least see the page
+    document.querySelectorAll('.btn').forEach(b=>b.disabled=false);
+    return;
+  }
+  const src=CDN_SOURCES[cdnIdx];
+  showPeerStatus('正在加载网络连接组件... ('+(cdnIdx+1)+'/'+CDN_SOURCES.length+')');
+  const s=document.createElement('script');
+  s.src=src;
+  s.onload=()=>{
+    peerLoaded=true;
+    showPeerStatus('');
+    document.getElementById('peerStatus')?.style.setProperty('display','none');
+    render(); // re-render to update UI
+  };
+  s.onerror=()=>{
+    cdnIdx++;
+    tryLoadPeer();
+  };
+  document.head.appendChild(s);
+}
+
+// Add peer status element
+(function(){
+  const el=document.createElement('div');
+  el.id='peerStatus';
+  el.style.cssText='position:fixed;top:0;left:0;right:0;text-align:center;padding:6px;font-size:.8em;background:rgba(6,182,212,.15);color:#06b6d4;z-index:9999';
+  document.body.appendChild(el);
+})();
+
+tryLoadPeer();
 </script>
 </body>
 </html>
