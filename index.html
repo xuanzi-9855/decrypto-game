@@ -858,11 +858,11 @@ function bindEvents(){
 function switchTab(tab){
   const tc=document.getElementById('tabCreate'),tj=document.getElementById('tabJoin');
   const pc=document.getElementById('panelCreate'),pj=document.getElementById('panelJoin');
+  if(!tc||!tj||!pc||!pj)return;
   if(tab==='create'){tc.classList.add('active');tj.classList.remove('active');pc.style.display='';pj.style.display='none'}
   else{tj.classList.add('active');tc.classList.remove('active');pc.style.display='none';pj.style.display=''}
 }
-// Auto-switch tab if room code in URL
-if(new URLSearchParams(location.search).get('room')){switchTab('join')}
+// Auto-switch moved after render()
 
 // Copy share link
 function copyShare(){
@@ -881,6 +881,9 @@ function copyShare(){
 // Init render
 viewPhase='menu';
 render();
+
+// Auto-switch to join tab if room code in URL (must be after render)
+if(new URLSearchParams(location.search).get('room')){switchTab('join')}
 
 // Async load PeerJS with CDN fallback
 const CDN_SOURCES=[
